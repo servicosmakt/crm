@@ -1,0 +1,8 @@
+{
+  "name": "GR CRM Autônomo",
+  "description": "GR CRM Autônomo: A tua estrutura de atendimento e vendas no WhatsApp organizada e pronta para escalar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
