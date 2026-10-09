@@ -16,12 +16,14 @@ import {
   Transaction,
   MessageTemplate,
   UserAuth,
+  LicenseUser,
 } from './types';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { LoginModal } from './components/LoginModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { BackupReminderBanner } from './components/BackupReminderBanner';
+import { DEFAULT_REGISTERED_USERS } from './utils/storage';
 
 // Tabs
 import { ClientsTab } from './components/tabs/ClientsTab';
@@ -31,6 +33,7 @@ import { FinanceTab } from './components/tabs/FinanceTab';
 import { PricingCalculatorTab } from './components/tabs/PricingCalculatorTab';
 import { WhatsAppTab } from './components/tabs/WhatsAppTab';
 import { SettingsTab } from './components/tabs/SettingsTab';
+import { AdminTab } from './components/tabs/AdminTab';
 
 export default function App() {
   const [data, setData] = useState<CRMData>(() => loadCRMData());
@@ -38,12 +41,24 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [scheduleClientId, setScheduleClientId] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isAdminRoute, setIsAdminRoute] = useState(false);
 
-  // Check URL query parameters for auto-login / magic activation link
+  // Check URL query parameters for auto-login / magic activation link / admin route
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
+        const hash = window.location.hash || '';
+        const path = window.location.pathname || '';
+
+        const hasAdminParam = params.has('admin') || params.get('rota') === 'admin';
+        const hasAdminHash = hash.toLowerCase().includes('admin');
+        const hasAdminPath = path.endsWith('/admin') || path.endsWith('/admin/');
+
+        if (hasAdminParam || hasAdminHash || hasAdminPath) {
+          setIsAdminRoute(true);
+        }
+
         const emailParam = params.get('email') || params.get('comprador');
         const nameParam = params.get('nome') || params.get('name');
         const dateParam = params.get('data') || params.get('date');
@@ -98,12 +113,86 @@ export default function App() {
     setData((prev) => ({
       ...prev,
       userAuth: {
-        ...prev.userAuth,
         isLoggedIn: false,
+        buyerEmail: '',
+        buyerName: '',
+        purchaseDate: new Date().toISOString().split('T')[0],
+        isUnlockedOverride: false,
+        role: 'user',
       },
     }));
     setIsLoginModalOpen(false);
-    showToast('Você foi desconectado.');
+    setCurrentTab('clients');
+    showToast('Você foi desconectado com sucesso.');
+  };
+
+  // Admin User Management Handlers
+  const handleAddUser = (newUser: Omit<LicenseUser, 'id' | 'createdAt'>) => {
+    const user: LicenseUser = {
+      ...newUser,
+      id: `usr-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setData((prev) => ({
+      ...prev,
+      registeredUsers: [user, ...(prev.registeredUsers || DEFAULT_REGISTERED_USERS)],
+    }));
+    showToast(`Usuário ${user.name} (${user.email}) cadastrado com sucesso!`);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setData((prev) => ({
+      ...prev,
+      registeredUsers: (prev.registeredUsers || DEFAULT_REGISTERED_USERS).filter(
+        (u) => u.id !== userId
+      ),
+    }));
+    showToast('Usuário removido da lista.');
+  };
+
+  const handleToggleUserUnlock = (userId: string) => {
+    setData((prev) => ({
+      ...prev,
+      registeredUsers: (prev.registeredUsers || DEFAULT_REGISTERED_USERS).map((u) => {
+        if (u.id === userId) {
+          const nextState = !u.isUnlockedOverride;
+          showToast(
+            nextState
+              ? `Bônus 100% liberados para ${u.name}!`
+              : `Regra dos 7 dias ativada para ${u.name}.`
+          );
+          return { ...u, isUnlockedOverride: nextState };
+        }
+        return u;
+      }),
+    }));
+  };
+
+  const handleSwitchUser = (user: LicenseUser) => {
+    setData((prev) => ({
+      ...prev,
+      userAuth: {
+        isLoggedIn: true,
+        buyerEmail: user.email,
+        buyerName: user.name,
+        purchaseDate: user.purchaseDate,
+        isUnlockedOverride: user.isUnlockedOverride,
+        role: user.role,
+      },
+      businessOwner: user.name,
+    }));
+    setCurrentTab('clients');
+    showToast(`Alternado para a conta de "${user.name}" (${user.role})!`);
+  };
+
+  const handleUpdateAdminPassword = (newKey: string) => {
+    setData((prev) => ({
+      ...prev,
+      registeredUsers: (prev.registeredUsers || DEFAULT_REGISTERED_USERS).map((u) =>
+        u.role === 'admin' ? { ...u, accessKey: newKey.trim() } : u
+      ),
+    }));
+    showToast('Sua nova senha de administradora foi salva com sucesso!');
   };
 
   const handleToggleBonusOverride = () => {
@@ -362,6 +451,7 @@ export default function App() {
         onSelectTab={setCurrentTab}
         currentTab={currentTab}
         onToggleBonusOverride={handleToggleBonusOverride}
+        onLogout={handleLogout}
       />
 
       {/* Main Layout: Sidebar + Active Tab */}
@@ -375,6 +465,7 @@ export default function App() {
           userAuth={data.userAuth}
           clientCount={data.clients.length}
           appointmentCount={data.appointments.filter((a) => a.status === 'agendado').length}
+          onLogout={handleLogout}
         />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
@@ -471,6 +562,18 @@ export default function App() {
               onLogout={handleLogout}
             />
           )}
+
+          {currentTab === 'admin' && (
+            <AdminTab
+              registeredUsers={data.registeredUsers || DEFAULT_REGISTERED_USERS}
+              currentUserAuth={data.userAuth}
+              onAddUser={handleAddUser}
+              onDeleteUser={handleDeleteUser}
+              onToggleUserUnlock={handleToggleUserUnlock}
+              onSwitchUser={handleSwitchUser}
+              onUpdateAdminPassword={handleUpdateAdminPassword}
+            />
+          )}
         </main>
       </div>
 
@@ -488,15 +591,19 @@ export default function App() {
       {!data.userAuth.isLoggedIn ? (
         <LoginModal
           userAuth={data.userAuth}
+          registeredUsers={data.registeredUsers || DEFAULT_REGISTERED_USERS}
           onLogin={handleLogin}
           isInitialScreen={true}
+          isAdminRoute={isAdminRoute}
         />
       ) : isLoginModalOpen ? (
         <LoginModal
           userAuth={data.userAuth}
+          registeredUsers={data.registeredUsers || DEFAULT_REGISTERED_USERS}
           onLogin={handleLogin}
           onLogout={handleLogout}
           onClose={() => setIsLoginModalOpen(false)}
+          isAdminRoute={isAdminRoute}
         />
       ) : null}
     </div>

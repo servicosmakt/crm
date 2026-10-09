@@ -5,9 +5,8 @@ import {
   Unlock,
   ShieldCheck,
   User,
-  Calendar,
-  Layers,
-  HelpCircle,
+  ShieldAlert,
+  LogOut,
 } from 'lucide-react';
 import { UserAuth, TabType } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -20,6 +19,7 @@ interface Props {
   onSelectTab: (tab: TabType) => void;
   currentTab: TabType;
   onToggleBonusOverride: () => void;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -29,10 +29,12 @@ export const Navbar: React.FC<Props> = ({
   onSelectTab,
   currentTab,
   onToggleBonusOverride,
+  onLogout,
 }) => {
   const bonusUnlocked = isBonusUnlocked(userAuth);
   const daysPassed = getDaysSincePurchase(userAuth.purchaseDate);
   const daysRemaining = getDaysRemainingForBonus(userAuth.purchaseDate);
+  const isAdmin = userAuth.role === 'admin';
 
   return (
     <header className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 text-white px-4 lg:px-6 py-2.5 shadow-md">
@@ -62,9 +64,21 @@ export const Navbar: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Center / Status Pill for 7 Days Rule */}
+        {/* Center / Status Pill for 7 Days Rule & Admin Access */}
         <div className="hidden md:flex items-center gap-2">
-          {bonusUnlocked ? (
+          {isAdmin ? (
+            <button
+              onClick={() => onSelectTab('admin')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition ${
+                currentTab === 'admin'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-purple-950/60 border border-purple-500/40 text-purple-300 hover:bg-purple-900/60'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-purple-300" />
+              <span>Painel Administradora</span>
+            </button>
+          ) : bonusUnlocked ? (
             <div
               onClick={onToggleBonusOverride}
               title="Clique para alternar simulação dos bônus"
@@ -74,9 +88,7 @@ export const Navbar: React.FC<Props> = ({
               <span>Bônus 100% Desbloqueados</span>
             </div>
           ) : (
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-medium"
-            >
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-medium">
               <Lock className="w-3.5 h-3.5 text-amber-400" />
               <span>Módulos bônus liberam em {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}</span>
             </div>
@@ -88,19 +100,40 @@ export const Navbar: React.FC<Props> = ({
           {/* PWA Install Button */}
           <PWAInstallButton compact />
 
-          {/* User Account / 7-Day rule simulation button */}
+          {/* User Account Button */}
           <button
             onClick={onOpenLogin}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition cursor-pointer"
-            title="Ver conta do comprador e simular dias"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition cursor-pointer"
+            title="Ver detalhes da conta conectada"
           >
             <div className="w-5 h-5 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-300">
               <User className="w-3.5 h-3.5" />
             </div>
-            <span className="hidden sm:inline max-w-[120px] truncate">
-              {userAuth.buyerName ? userAuth.buyerName.split(' ')[0] : 'Minha Conta'}
+            <span className="hidden sm:inline max-w-[110px] truncate">
+              {userAuth.buyerName ? userAuth.buyerName.split(' ')[0] : 'Conta'}
             </span>
+            {userAuth.role === 'admin' && (
+              <span className="text-[9px] px-1 bg-purple-500/30 text-purple-300 rounded-sm hidden sm:inline">
+                Admin
+              </span>
+            )}
           </button>
+
+          {/* Logout button */}
+          {onLogout && (
+            <button
+              onClick={() => {
+                if (confirm('Deseja desconectar da conta e voltar para a tela de login?')) {
+                  onLogout();
+                }
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 text-red-300 hover:text-white text-xs font-semibold transition cursor-pointer"
+              title="Sair desta conta (desconectar)"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-400" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

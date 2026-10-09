@@ -30,6 +30,7 @@ const CATEGORIES: ServiceCategory[] = [
   'Reparos, Manutenção & Técnico',
   'Design & Produção',
   'Unhas / Nail Design',
+  'Serviços Profissionais',
   'Geral / Outros',
 ];
 

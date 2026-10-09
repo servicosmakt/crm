@@ -5,7 +5,8 @@ export type TabType =
   | 'finance' 
   | 'pricing' 
   | 'whatsapp' 
-  | 'settings';
+  | 'settings'
+  | 'admin';
 
 export interface Client {
   id: string;
@@ -26,6 +27,7 @@ export type ServiceCategory =
   | 'Reparos, Manutenção & Técnico'
   | 'Design & Produção'
   | 'Unhas / Nail Design'
+  | 'Serviços Profissionais'
   | 'Geral / Outros';
 
 export interface ServiceItem {
@@ -72,12 +74,25 @@ export interface MessageTemplate {
   isDefault?: boolean;
 }
 
+export interface LicenseUser {
+  id: string;
+  email: string;
+  name: string;
+  accessKey: string;
+  role: 'admin' | 'user' | 'tester';
+  purchaseDate: string; // ISO date string e.g. 2026-10-07
+  isUnlockedOverride: boolean; // true se bônus liberado, false se cumpre regra dos 7 dias
+  createdAt: string;
+  notes?: string;
+}
+
 export interface UserAuth {
   isLoggedIn: boolean;
   buyerEmail: string;
   buyerName: string;
   purchaseDate: string; // ISO date string e.g. 2026-10-01
   isUnlockedOverride?: boolean; // Admin/tester toggle to bypass 7 days
+  role?: 'admin' | 'user' | 'tester';
 }
 
 export interface CRMData {
@@ -90,4 +105,5 @@ export interface CRMData {
   businessName: string;
   businessOwner: string;
   lastBackupDate?: string; // ISO string of last exported backup
+  registeredUsers?: LicenseUser[];
 }

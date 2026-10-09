@@ -1,6 +1,31 @@
-import { CRMData, MessageTemplate, UserAuth } from '../types';
+import { CRMData, MessageTemplate, UserAuth, LicenseUser } from '../types';
 
-const STORAGE_KEY = 'gr_crm_autonomo_data_v2';
+const STORAGE_KEY = 'gr_crm_autonomo_data_v3';
+
+export const DEFAULT_REGISTERED_USERS: LicenseUser[] = [
+  {
+    id: 'usr-admin',
+    email: 'gleicieneads@gmail.com',
+    name: 'Gleiciene Rocha (Administradora)',
+    accessKey: 'ADMIN_PLEASE_CHANGE_ME_IMMEDIATELY',
+    role: 'admin',
+    purchaseDate: '2026-01-01',
+    isUnlockedOverride: true,
+    createdAt: new Date().toISOString(),
+    notes: 'Conta Administradora com controle total do sistema e gerenciamento de licenças.',
+  },
+  {
+    id: 'usr-teste',
+    email: 'usuarioteste@gmail.com',
+    name: 'Usuário de Teste',
+    accessKey: '123',
+    role: 'tester',
+    purchaseDate: new Date().toISOString().split('T')[0],
+    isUnlockedOverride: false,
+    createdAt: new Date().toISOString(),
+    notes: 'Conta de teste com senha 123 para validar a regra dos 7 dias.',
+  },
+];
 
 export const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
@@ -65,13 +90,14 @@ export const INITIAL_DATA: CRMData = {
   businessName: 'Espaço & Serviços Profissionais',
   businessOwner: 'Gleiciene Rocha',
   userAuth: {
-    isLoggedIn: true,
-    buyerEmail: 'gleicieneads@gmail.com',
-    buyerName: 'Gleiciene Rocha',
-    // 10 dias atrás para garantir que todos os módulos bônus estejam 100% liberados para testes
-    purchaseDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    isUnlockedOverride: true, // Liberado por padrão para testes imediatos
+    isLoggedIn: false, // Inicia DESLOGADO para exibir a tela de login ao abrir o site!
+    buyerEmail: '',
+    buyerName: '',
+    purchaseDate: new Date().toISOString().split('T')[0],
+    isUnlockedOverride: false,
+    role: 'user',
   },
+  registeredUsers: DEFAULT_REGISTERED_USERS,
   clients: [
     {
       id: 'c-1',
@@ -242,6 +268,17 @@ export function loadCRMData(): CRMData {
     }
     const parsed = JSON.parse(raw);
     // Ensure backwards compatibility with any missing keys
+    // Ensure default users like admin and usuarioteste are always available
+    const userList: LicenseUser[] = Array.isArray(parsed.registeredUsers) && parsed.registeredUsers.length > 0
+      ? [...parsed.registeredUsers]
+      : [...DEFAULT_REGISTERED_USERS];
+
+    DEFAULT_REGISTERED_USERS.forEach((defUser) => {
+      if (!userList.some((u) => u.email.toLowerCase() === defUser.email.toLowerCase())) {
+        userList.push(defUser);
+      }
+    });
+
     return {
       businessName: parsed.businessName || INITIAL_DATA.businessName,
       businessOwner: parsed.businessOwner || INITIAL_DATA.businessOwner,
@@ -251,6 +288,8 @@ export function loadCRMData(): CRMData {
       appointments: Array.isArray(parsed.appointments) ? parsed.appointments : INITIAL_DATA.appointments,
       transactions: Array.isArray(parsed.transactions) ? parsed.transactions : INITIAL_DATA.transactions,
       templates: Array.isArray(parsed.templates) && parsed.templates.length > 0 ? parsed.templates : DEFAULT_TEMPLATES,
+      registeredUsers: userList,
+      lastBackupDate: parsed.lastBackupDate,
     };
   } catch (err) {
     console.error('Error loading CRM data from LocalStorage:', err);
