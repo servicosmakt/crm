@@ -48,6 +48,7 @@ export const AdminTab: React.FC<Props> = ({
   const [accessKey, setAccessKey] = useState('');
   const [role, setRole] = useState<'user' | 'tester'>('tester');
   const [accessType, setAccessType] = useState<'locked7days' | 'fullUnlocked'>('locked7days');
+  const [purchaseDateInput, setPurchaseDateInput] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleOpenModal = () => {
@@ -56,6 +57,7 @@ export const AdminTab: React.FC<Props> = ({
     setAccessKey('');
     setRole('tester');
     setAccessType('locked7days');
+    setPurchaseDateInput(new Date().toISOString().split('T')[0]);
     setNotes('');
     setIsModalOpen(true);
   };
@@ -67,10 +69,7 @@ export const AdminTab: React.FC<Props> = ({
       return;
     }
 
-    const purchaseDate =
-      accessType === 'fullUnlocked'
-        ? new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0];
+    const purchaseDate = purchaseDateInput || new Date().toISOString().split('T')[0];
 
     onAddUser({
       name: name.trim() || 'Usuário de Teste',
@@ -405,6 +404,19 @@ export const AdminTab: React.FC<Props> = ({
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Data da Compra
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={purchaseDateInput}
+                  onChange={(e) => setPurchaseDateInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                />
               </div>
 
               <div>
